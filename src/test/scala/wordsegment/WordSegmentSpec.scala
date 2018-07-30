@@ -102,4 +102,5 @@ class WordSegmentSpec extends FlatSpec with Matchers {
     )
     segment(result.mkString) should be (result)
   }
+  
 }

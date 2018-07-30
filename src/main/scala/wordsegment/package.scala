@@ -65,13 +65,7 @@ package object wordsegment {
   }
 
   def segment(text: String): Seq[String] = {
-    val search = new Searcher(
-      EMBEDDED_UNIGRAMS,
-      EMBEDDED_BIGRAMS,
-      EMBEDDED_WORDS,
-      EMBEDDED_TOTAL,
-      EMBEDDED_LIMIT
-    )
+    val search = Searcher.default
     
     val clean_text = wordsegment.clean(text)
     val size = 250
