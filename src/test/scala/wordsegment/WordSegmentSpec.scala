@@ -11,11 +11,11 @@ class WordSegmentSpec extends FlatSpec with Matchers {
   }
 
   "test" should "be in UNIGRAMS" in {
-    default.unigrams should contain key "test"
+    EMBEDDED_UNIGRAMS should contain key "test"
   }
   
   "in the" should "be in BIGRAMS" in {
-    default.bigrams should contain key "in the"
+    EMBEDDED_BIGRAMS should contain key "in the"
   }
 
   "choosespain" should "be `choose spain`" in {

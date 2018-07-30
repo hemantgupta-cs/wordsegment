@@ -4,12 +4,16 @@ import java.io._
 import scala.io.Source
 
 package object wordsegment {
-  val ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
-  val EMBEDDED_UNIGRAMS_PATH = "wordsegment/unigrams.txt"
-  val EMBEDDED_BIGRAMS_PATH = "wordsegment/bigrams.txt"
-  val EMBEDDED_WORDS_PATH = "wordsegment/words.txt"
+  val ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+  val EMBEDDED_UNIGRAMS_RESOURCE_PATH = "wordsegment/unigrams.txt"
+  val EMBEDDED_BIGRAMS_RESOURCE_PATH = "wordsegment/bigrams.txt"
+  val EMBEDDED_WORDS_RESOURCE_PATH = "wordsegment/words.txt"
   val EMBEDDED_TOTAL = 1024908267229.0
   val EMBEDDED_LIMIT = 24
+      
+  val EMBEDDED_UNIGRAMS = parsePairsFromResource(EMBEDDED_UNIGRAMS_RESOURCE_PATH)
+  val EMBEDDED_BIGRAMS = parsePairsFromResource(EMBEDDED_BIGRAMS_RESOURCE_PATH)
+  val EMBEDDED_WORDS = loadWordsFromResource(EMBEDDED_WORDS_RESOURCE_PATH)
   
   def clean(text: String): String = {
     text.toLowerCase
@@ -19,63 +23,69 @@ package object wordsegment {
 
   def parsePairs(stream: InputStream): Map[String, Double] = {
     require(stream != null)
-    val lines = Source.fromInputStream(stream).getLines
-    val pairs = lines.map(l => l.split("\t"))
-    pairs.map(pair => pair match {
-      case Array(word: String, score: String) => (word, score.toDouble)
-    }).toMap
+    val source = Source.fromInputStream(stream)
+    try {
+      val pairs = source.getLines.map(l => l.split("\t"))
+      pairs.map(pair => pair match {
+        case Array(word: String, score: String) => (word, score.toDouble)
+      }).toMap
+    } finally {
+      source.close
+    }
   }
   
   def parsePairsFromResource(path: String): Map[String, Double] = {
-    val stream = getClass.getClassLoader.getResourceAsStream(path)
-    try {
-      parsePairs(stream)
-    } finally {
-      stream.close
-    }
+    parsePairs(getClass.getClassLoader.getResourceAsStream(path))
+  }
+  
+  def parsePairsFromFile(path: String): Map[String, Double] = {
+    parsePairs(new FileInputStream(new File(path)))
   }
 
   def loadWords(stream: InputStream): Seq[String] = {
-    Source.fromInputStream(stream).getLines.toSeq
+    val source = Source.fromInputStream(stream)
+    try {
+      source.getLines.toSeq
+    } finally {
+      source.close
+    }
   }
 
   def parseWordsFromFile(path: String): Seq[String] = {
-    val stream = new FileInputStream(new File(path))
-    try {
-      loadWords(stream)
-    } finally {
-      stream.close
-    }
+    loadWords(new FileInputStream(new File(path)))
   }
   
   def loadWordsFromResource(path: String): Seq[String] = {
-    val stream = getClass.getClassLoader.getResourceAsStream(path)
-    try {
-      loadWords(stream)
-    } finally {
-      stream.close
-    }
+    loadWords(getClass.getClassLoader.getResourceAsStream(path))
   }
 
   def loadWordsFromFile(path: String): Seq[String] = {
     val stream = new FileInputStream(new File(path))
-    try {
-      loadWords(stream)
-    } finally {
-      stream.close
-    }
+    loadWords(stream)
   }
 
-  def default: Segmenter = {
-    new Segmenter(
-      parsePairsFromResource(EMBEDDED_UNIGRAMS_PATH),
-      parsePairsFromResource(EMBEDDED_BIGRAMS_PATH),
-      loadWordsFromResource(EMBEDDED_WORDS_PATH),
+  def segment(text: String): Seq[String] = {
+    val search = new Searcher(
+      EMBEDDED_UNIGRAMS,
+      EMBEDDED_BIGRAMS,
+      EMBEDDED_WORDS,
       EMBEDDED_TOTAL,
       EMBEDDED_LIMIT
     )
+    
+    val clean_text = wordsegment.clean(text)
+    val size = 250
+    
+    var prefix = ""
+    var words = Seq.empty[String]
+    0.to(clean_text.length).by(size).foreach(offset => {
+      val chunk_end = if(offset + size < clean_text.length) offset + size else clean_text.length
+      val chunk = clean_text.substring(offset, chunk_end)
+      val (_: Double, chunk_words: Seq[String]) = search(prefix + chunk)
+      prefix = chunk_words.takeRight(5).mkString
+      words ++= chunk_words.dropRight(5)
+    })
+    val (_: Double, prefix_words: Seq[String]) = search(prefix)
+    words ++ prefix_words
   }
-
-  def segment(text: String): Seq[String] = default.segment(text)
-  
 }
