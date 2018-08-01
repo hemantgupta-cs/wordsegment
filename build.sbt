@@ -1,7 +1,7 @@
 scalaVersion := "2.11.11"
 
 name := "wordsegment"
-version := "0.0.1-SNAPSHOT"
+version := "0.1.0-SNAPSHOT"
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.5" % "test"
